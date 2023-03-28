@@ -419,6 +419,29 @@ project('cafe-scripted') {
 	}
 }
 
+project('crac-adapter') {
+		description = 'CRaC Spring Framework Adapter'
+
+	dependencies {
+		api 'io.github.crac:org-crac:0.1.3'
+		api "org.jruby:jruby-complete:$jrubyVersion"
+		api "org.python:jython-standalone:$jythonVersion"
+		api "org.apache.groovy:groovy-jsr223:$groovyVersion"
+		api "org.apache.logging.log4j:log4j-core:$log4jVersion"
+	}
+
+	task runCafeDemoApp(type: JavaExec) {
+		main 'org.springframework.integration.samples.cafe.demo.CafeDemoApp'
+		args project.hasProperty('lang') ? project.lang : ''
+		classpath = sourceSets.main.runtimeClasspath
+	}
+
+	task runControlBus(type: JavaExec) {
+		main 'org.springframework.integration.samples.cafe.demo.ControlBusMain'
+		classpath = sourceSets.main.runtimeClasspath
+	}
+}
+
 project('loan-broker') {
 	description = 'Loan Broker Sample'
 
