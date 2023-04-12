@@ -33,11 +33,16 @@ public class CRaCAdapter implements Resource {
 
     @Override
     public void beforeCheckpoint(Context<? extends Resource> context) throws Exception {
+        System.out.println(">>>>>>>>>>>>>>>>>>>> beforeCheckpoint [Start]");
         this.applicationContext.stop();
+        System.out.println(">>>>>>>>>>>>>>>>>>>> beforeCheckpoint [Complete]");
     }
 
     @Override
     public void afterRestore(Context<? extends Resource> context) throws Exception {
+        System.out.println(">>>>>>>>>>>>>>>>>>>> afterRestore [Start]");
         this.applicationContext.start();
+        Thread.sleep(20000);
+        System.out.println(">>>>>>>>>>>>>>>>>>>> afterRestore [Complete]");
     }
 }

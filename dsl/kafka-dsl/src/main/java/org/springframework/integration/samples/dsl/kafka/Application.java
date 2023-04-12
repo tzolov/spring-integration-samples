@@ -51,10 +51,18 @@ import org.springframework.messaging.handler.annotation.Header;
 public class Application {
 
 	public static void main(String[] args) throws Exception {
-		ConfigurableApplicationContext context =
-				new SpringApplicationBuilder(Application.class)
-						.web(WebApplicationType.NONE)
-						.run(args);
+
+		ConfigurableApplicationContext context = new SpringApplicationBuilder(Application.class)
+				.web(WebApplicationType.NONE)
+				.run(args);
+		context.getBean(Application.class).runDemo(context);
+
+		System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+		System.out.println(">>>>>>>>>>>> First run completed. Ready for Checkpoint >>>>>>>>>>>>>>>>");
+		System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+
+		Thread.sleep(30000);
+		System.out.println("Start second run!");
 		context.getBean(Application.class).runDemo(context);
 		context.close();
 	}
@@ -83,7 +91,6 @@ public class Application {
 			Message<?> received = kafkaGateway.receiveFromKafka();
 			System.out.println(received);
 		}
-		context.close();
 	}
 
 	@Autowired
@@ -140,12 +147,11 @@ public class Application {
 		// change the group id so we don't revoke the other partitions.
 		consumerProperties.put(ConsumerConfig.GROUP_ID_CONFIG,
 				consumerProperties.get(ConsumerConfig.GROUP_ID_CONFIG) + "x");
-		IntegrationFlow flow =
-				IntegrationFlow
-						.from(Kafka.messageDrivenChannelAdapter(
-								new DefaultKafkaConsumerFactory<String, String>(consumerProperties), topics))
-						.channel("fromKafka")
-						.get();
+		IntegrationFlow flow = IntegrationFlow
+				.from(Kafka.messageDrivenChannelAdapter(
+						new DefaultKafkaConsumerFactory<String, String>(consumerProperties), topics))
+				.channel("fromKafka")
+				.get();
 		this.flowContext.registration(flow).register();
 	}
 

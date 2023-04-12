@@ -27,9 +27,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.mail.MailProperties;
-import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
-import org.springframework.crac.CRaCAdapter;
 import org.springframework.integration.dsl.IntegrationFlow;
 import org.springframework.integration.dsl.Pollers;
 import org.springframework.integration.file.FileHeaders;
@@ -58,11 +56,6 @@ public class Application {
 
 	@Autowired
 	private MailProperties mailProperties;
-
-	@Bean
-    public CRaCAdapter cracAdapter(ConfigurableApplicationContext applicationContext) {
-        return new CRaCAdapter(applicationContext);
-    }
 
 	/**
 	 * Poll for files, add an error channel, split into lines route the start/end markers

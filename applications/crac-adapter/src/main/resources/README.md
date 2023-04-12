@@ -5,7 +5,7 @@
 docker build -f src/main/resources/Dockerfile  -t java_17_crac .
 ```
 
-Uses the `src/main/resources/Dockerfile` to build new container image (`java_17_crac:latest`) using `Ubuntu 22.04` and preinstalled `Java 17 CRaC`.
+Uses the `src/main/resources/Dockerfile` to build a new container image (`java_17_crac:latest`) using `Ubuntu 22.04` and pre-installed `Java 17 CRaC`.
 
 
 ## Create App Checkpoint
