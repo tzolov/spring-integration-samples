@@ -54,11 +54,11 @@
     <url>https://github.com/spring-projects/spring-integration-samples/issues</url>
   </issueManagement>
   <dependencies>
-    <dependency>
+    <!-- <dependency>
       <groupId>org.springframework.crac</groupId>
       <artifactId>crac-adapter</artifactId>
       <version>1.0.0-SNAPSHOT</version>
-    </dependency>
+    </dependency> -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-integration</artifactId>
