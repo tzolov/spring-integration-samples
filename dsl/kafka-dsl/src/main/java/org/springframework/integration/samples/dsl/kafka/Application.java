@@ -17,17 +17,19 @@
 package org.springframework.integration.samples.dsl.kafka;
 
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.WebApplicationType;
+import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
-import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.SmartLifecycle;
 import org.springframework.context.annotation.Bean;
 import org.springframework.integration.annotation.Gateway;
 import org.springframework.integration.annotation.MessagingGateway;
@@ -48,53 +50,29 @@ import org.springframework.messaging.handler.annotation.Header;
  */
 @SpringBootApplication
 @EnableConfigurationProperties(KafkaAppProperties.class)
-public class Application {
+public class Application implements SmartLifecycle {
+
+	private boolean running = false;
+
+	private AtomicBoolean stopRequested = new AtomicBoolean(true);
+
+	private ReentrantLock lock = new ReentrantLock();
+
+	private Condition appRunningCondition = lock.newCondition();
+
+	private Condition appStoppedCondition = lock.newCondition();
+
+	private int count = 100;
 
 	public static void main(String[] args) throws Exception {
-
-		ConfigurableApplicationContext context = new SpringApplicationBuilder(Application.class)
-				.web(WebApplicationType.NONE)
-				.run(args);
-		context.getBean(Application.class).runDemo(context);
-
-		System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-		System.out.println(">>>>>>>>>>>> First run completed. Ready for Checkpoint >>>>>>>>>>>>>>>>");
-		System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-
-		Thread.sleep(30000);
-		System.out.println("Start second run!");
-		context.getBean(Application.class).runDemo(context);
-		context.close();
-	}
-
-	private void runDemo(ConfigurableApplicationContext context) {
-		KafkaGateway kafkaGateway = context.getBean(KafkaGateway.class);
-		System.out.println("Sending 10 messages...");
-		for (int i = 0; i < 10; i++) {
-			String message = "foo" + i;
-			System.out.println("Send to Kafka: " + message);
-			kafkaGateway.sendToKafka(message, this.properties.getTopic());
-		}
-
-		for (int i = 0; i < 10; i++) {
-			Message<?> received = kafkaGateway.receiveFromKafka();
-			System.out.println(received);
-		}
-		System.out.println("Adding an adapter for a second topic and sending 10 messages...");
-		addAnotherListenerForTopics(this.properties.getNewTopic());
-		for (int i = 0; i < 10; i++) {
-			String message = "bar" + i;
-			System.out.println("Send to Kafka: " + message);
-			kafkaGateway.sendToKafka(message, this.properties.getNewTopic());
-		}
-		for (int i = 0; i < 10; i++) {
-			Message<?> received = kafkaGateway.receiveFromKafka();
-			System.out.println(received);
-		}
+		SpringApplication.run(Application.class, args);
 	}
 
 	@Autowired
 	private KafkaAppProperties properties;
+
+	@Autowired
+	private KafkaGateway kafkaGateway;
 
 	@MessagingGateway
 	public interface KafkaGateway {
@@ -108,16 +86,16 @@ public class Application {
 	}
 
 	@Bean
-	public IntegrationFlow toKafka(KafkaTemplate<?, ?> kafkaTemplate) {
+	public IntegrationFlow toKafka(KafkaTemplate<?, ?> kafkaTemplate, KafkaAppProperties properties) {
 		return f -> f
 				.handle(Kafka.outboundChannelAdapter(kafkaTemplate)
-						.messageKey(this.properties.getMessageKey()));
+						.messageKey(properties.getMessageKey()));
 	}
 
 	@Bean
-	public IntegrationFlow fromKafkaFlow(ConsumerFactory<?, ?> consumerFactory) {
+	public IntegrationFlow fromKafkaFlow(ConsumerFactory<?, ?> consumerFactory, KafkaAppProperties properties) {
 		return IntegrationFlow
-				.from(Kafka.messageDrivenChannelAdapter(consumerFactory, this.properties.getTopic()))
+				.from(Kafka.messageDrivenChannelAdapter(consumerFactory, properties.getTopic()))
 				.channel(c -> c.queue("fromKafka"))
 				.get();
 	}
@@ -155,4 +133,104 @@ public class Application {
 		this.flowContext.registration(flow).register();
 	}
 
+	//
+	// Application SmartLifecycle
+	//
+	@Override
+	public void start() {
+
+		stopRequested.set(false);
+
+		System.out.println("Sending 10 messages...");
+
+		for (int i = 0; i < count; i++) {
+			String message = "foo" + i;
+			System.out.println("Send to Kafka: " + message);
+			conditionalOperation(() -> kafkaGateway.sendToKafka(message, this.properties.getTopic()));
+		}
+
+		for (int i = 0; i < count; i++) {
+			conditionalOperation(() -> {
+				sleep(300);
+				Message<?> received = kafkaGateway.receiveFromKafka();
+				System.out.println(received);
+			});
+		}
+
+		conditionalOperation(() -> {
+			System.out.println("Adding an adapter for a second topic and sending 10 messages...");
+			this.addAnotherListenerForTopics(this.properties.getNewTopic());
+		});
+
+		for (int i = 0; i < count; i++) {
+			String message = "bar" + i;
+			System.out.println("Send to Kafka: " + message);
+			conditionalOperation(() -> kafkaGateway.sendToKafka(message, this.properties.getNewTopic()));
+		}
+		for (int i = 0; i < count; i++) {
+			conditionalOperation(() -> {
+				sleep(300);
+				Message<?> received = kafkaGateway.receiveFromKafka();
+				System.out.println(received);
+			});
+		}
+	}
+
+	@Override
+	public void stop() {
+		stopRequested.set(true);
+		try {
+			lock.lock();
+			while (this.running) {
+				appStoppedCondition.await();
+			}
+		}
+		catch (InterruptedException e) {
+			throw new IllegalStateException(e);
+		}
+		finally {
+			appRunningCondition.signalAll();
+			lock.unlock();
+		}
+	}
+
+	@Override
+	public boolean isRunning() {
+		return !this.stopRequested.get();
+	}
+
+	private void sleep(long ms) {
+		try {
+			Thread.sleep(ms);
+		}
+		catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+
+	@FunctionalInterface
+	public interface ConditionedFunction {
+		void apply();
+	}
+
+	private void conditionalOperation(ConditionedFunction conditionedFunction) {
+		try {
+			lock.lock();
+			while (stopRequested.get()) {
+				appRunningCondition.await();
+			}
+			running = true;
+
+			conditionedFunction.apply();
+		}
+		catch (InterruptedException e) {
+			throw new IllegalStateException(e);
+		}
+		finally {
+			running = false;
+			appStoppedCondition.signalAll();
+			lock.unlock();
+
+		}
+	}
 }
