@@ -69,7 +69,13 @@ public class Application implements SmartLifecycle {
 	}
 
 	@Autowired
-	private KafkaAppProperties properties;
+	private IntegrationFlowContext flowContext;
+
+	@Autowired
+	private KafkaProperties kafkaProperties;
+
+	@Autowired
+	private KafkaAppProperties appProperties;
 
 	@Autowired
 	private KafkaGateway kafkaGateway;
@@ -114,12 +120,6 @@ public class Application implements SmartLifecycle {
 		return new NewTopic(properties.getNewTopic(), 1, (short) 1);
 	}
 
-	@Autowired
-	private IntegrationFlowContext flowContext;
-
-	@Autowired
-	private KafkaProperties kafkaProperties;
-
 	public void addAnotherListenerForTopics(String... topics) {
 		Map<String, Object> consumerProperties = kafkaProperties.buildConsumerProperties();
 		// change the group id so we don't revoke the other partitions.
@@ -146,7 +146,7 @@ public class Application implements SmartLifecycle {
 		for (int i = 0; i < count; i++) {
 			String message = "foo" + i;
 			System.out.println("Send to Kafka: " + message);
-			conditionalOperation(() -> kafkaGateway.sendToKafka(message, this.properties.getTopic()));
+			conditionalOperation(() -> kafkaGateway.sendToKafka(message, this.appProperties.getTopic()));
 		}
 
 		for (int i = 0; i < count; i++) {
@@ -154,18 +154,18 @@ public class Application implements SmartLifecycle {
 				sleep(300);
 				Message<?> received = kafkaGateway.receiveFromKafka();
 				System.out.println(received);
-			});
+			});	
 		}
 
 		conditionalOperation(() -> {
 			System.out.println("Adding an adapter for a second topic and sending 10 messages...");
-			this.addAnotherListenerForTopics(this.properties.getNewTopic());
+			this.addAnotherListenerForTopics(this.appProperties.getNewTopic());
 		});
 
 		for (int i = 0; i < count; i++) {
 			String message = "bar" + i;
 			System.out.println("Send to Kafka: " + message);
-			conditionalOperation(() -> kafkaGateway.sendToKafka(message, this.properties.getNewTopic()));
+			conditionalOperation(() -> kafkaGateway.sendToKafka(message, this.appProperties.getNewTopic()));
 		}
 		for (int i = 0; i < count; i++) {
 			conditionalOperation(() -> {
@@ -206,6 +206,11 @@ public class Application implements SmartLifecycle {
 		catch (InterruptedException e) {
 			e.printStackTrace();
 		}
+	}
+
+	@Override
+	public int getPhase() {
+		return Integer.MAX_VALUE;
 	}
 
 	@FunctionalInterface

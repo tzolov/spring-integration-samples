@@ -276,6 +276,10 @@ subprojects { subproject ->
 		}
 
 		dependencyManagement {
+			generatedPomCustomization {
+            	enabled = false
+        	}
+
 			imports {
 				mavenBom "org.springframework.integration:spring-integration-bom:$springIntegrationVersion"
 				mavenBom "org.springframework:spring-framework-bom:$springVersion"
@@ -1452,6 +1456,7 @@ project('kafka-dsl') {
 	apply plugin: 'org.springframework.boot'
 
 	dependencies {
+		api "org.crac:crac:0.1.3"
 		api 'org.springframework.boot:spring-boot-starter-integration'
 		api 'org.springframework.integration:spring-integration-core'
 		api 'org.springframework.integration:spring-integration-kafka'
