@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.0.5-SNAPSHOT</version>
+  </parent>
+
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.springframework.integration.samples</groupId>
   <artifactId>file-split-ftp</artifactId>
@@ -62,18 +68,18 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
-			<exclusions>
-				<exclusion>
-					<groupId>org.springframework.boot</groupId>
-					<artifactId>spring-boot-starter-tomcat</artifactId>
-				</exclusion>
-			</exclusions>
+      <exclusions>
+        <exclusion>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-tomcat</artifactId>
+        </exclusion>
+      </exclusions>
       <scope>compile</scope>
     </dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-jetty</artifactId>
-		</dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-jetty</artifactId>
+    </dependency>
     <dependency>
       <groupId>org.crac</groupId>
       <artifactId>crac</artifactId>
@@ -169,11 +175,6 @@
       </plugin>
     </plugins>
   </build>
-  <parent>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.0.5-SNAPSHOT</version>
-  </parent>
   <repositories>
     <repository>
       <id>repo.spring.io.milestone</id>
